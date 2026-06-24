@@ -38,7 +38,7 @@ graph TD
         BaseQA["base_qa.py (Generic Core Driver)"]
     end
     subgraph QA ["QA Local Workspace (QA/)"]
-        subgraph Project ["Project Workspace (e.g., ziwei/)"]
+        subgraph Project ["Project Workspace (e.g., project-a/)"]
             SubQA["project_qa.py (Subclass selector definitions)"]
             PC["pc-web/ (Desktop runs & image output)"]
             Mobile["mobile/ (Mobile runs & image output)"]
@@ -55,19 +55,19 @@ graph TD
 
 ## 🚀 Quick Start
 
-Here is a 3-step walk-through to implement visual QA for a project named `GoodTeam`.
+Here is a 3-step walk-through to implement visual QA for a generic project named `MyProject`.
 
-### 1️⃣ Define your subclass `goodteam_qa.py`
-Create a folder named `goodteam/` under your local `QA/` workspace, and inherit `BaseQA`:
+### 1️⃣ Define your subclass `project_qa.py`
+Create a folder named `project_qa/` under your local `QA/` workspace, and inherit `BaseQA`:
 
 ```python
 import sys
 # Import the universal-qa directory
-sys.path.append("/absolute/path/to/universal-qa")
+sys.path.append("/path/to/universal-qa")
 
 from base_qa import BaseQA
 
-class GoodTeamQA(BaseQA):
+class ProjectQA(BaseQA):
     def __init__(self, base_url="http://localhost:3000", out_dir="qa-screenshots", is_mobile=False, viewport=None):
         super().__init__(base_url, out_dir, is_mobile, viewport)
 
@@ -79,21 +79,21 @@ class GoodTeamQA(BaseQA):
         self.wait(page, 1000) # Built-in smart pacing wait
 ```
 
-### 2️⃣ Write the execution script `run_goodteam.py`
-Create the runner script in `QA/goodteam/`:
+### 2️⃣ Write the execution script `run_project.py`
+Create the runner script in `QA/project_qa/`:
 
 ```python
 import sys
-sys.path.append("/absolute/path/to/universal-qa")
-sys.path.append("/absolute/path/to/QA/goodteam")
+sys.path.append("/path/to/universal-qa")
+sys.path.append("/path/to/QA/project_qa")
 
-from goodteam_qa import GoodTeamQA
+from project_qa import ProjectQA
 from playwright.sync_api import sync_playwright
 
 # Setup for desktop visual QA
-qa = GoodTeamQA(
+qa = ProjectQA(
     base_url="http://localhost:3000",
-    out_dir="/absolute/path/to/QA/goodteam/screenshots-desktop",
+    out_dir="/path/to/QA/project_qa/screenshots-desktop",
     is_mobile=False
 )
 
@@ -121,7 +121,7 @@ with sync_playwright() as p:
 ```bash
 pip install playwright
 playwright install
-python run_goodteam.py
+python run_project.py
 ```
 
 ---

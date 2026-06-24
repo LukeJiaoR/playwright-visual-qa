@@ -38,7 +38,7 @@ graph TD
         BaseQA["base_qa.py (通用底层驱动类)"]
     end
     subgraph QA ["QA 本地工作区 (QA/)"]
-        subgraph Project ["项目测试目录 (以 ziwei/ 为例)"]
+        subgraph Project ["项目测试目录 (以 project-a/ 为例)"]
             SubQA["project_qa.py (子类：封装特有定位器)"]
             PC["pc-web/ (PC 端运行逻辑与截图归档)"]
             Mobile["mobile/ (移动端运行逻辑与截图归档)"]
@@ -55,19 +55,19 @@ graph TD
 
 ## 🚀 快速上手
 
-以在 `QA/` 工作区下为 `GoodTeam` 项目快速编写一套视觉测试为例，仅需 3 步：
+以在 `QA/` 工作区下为 `MyProject` 项目快速编写一套视觉测试为例，仅需 3 步：
 
-### 1️⃣ 创建项目专属业务类 `goodteam_qa.py`
-在本地的 `QA/` 目录下创建 `goodteam` 文件夹，并继承通用基类 `BaseQA`：
+### 1️⃣ 创建项目专属业务类 `project_qa.py`
+在本地的 `QA/` 目录下创建 `project_qa` 文件夹，并继承通用基类 `BaseQA`：
 
 ```python
 import sys
-# 引入通用框架目录的绝对路径
-sys.path.append("/absolute/path/to/universal-qa")
+# 引入通用框架目录的路径
+sys.path.append("/path/to/universal-qa")
 
 from base_qa import BaseQA
 
-class GoodTeamQA(BaseQA):
+class ProjectQA(BaseQA):
     def __init__(self, base_url="http://localhost:3000", out_dir="qa-screenshots", is_mobile=False, viewport=None):
         super().__init__(base_url, out_dir, is_mobile, viewport)
 
@@ -79,21 +79,21 @@ class GoodTeamQA(BaseQA):
         self.wait(page, 1000) # 调用基类自带的等待方法
 ```
 
-### 2️⃣ 编写测试执行脚本 `run_goodteam.py`
-在 `QA/goodteam/` 下创建启动脚本进行串联：
+### 2️⃣ 编写测试执行脚本 `run_project.py`
+在 `QA/project_qa/` 下创建启动脚本进行串联：
 
 ```python
 import sys
-sys.path.append("/absolute/path/to/universal-qa")
-sys.path.append("/absolute/path/to/QA/goodteam")
+sys.path.append("/path/to/universal-qa")
+sys.path.append("/path/to/QA/project_qa")
 
-from goodteam_qa import GoodTeamQA
+from project_qa import ProjectQA
 from playwright.sync_api import sync_playwright
 
 # 实例化 PC 端视觉 QA 配置
-qa = GoodTeamQA(
+qa = ProjectQA(
     base_url="http://localhost:3000",
-    out_dir="/absolute/path/to/QA/goodteam/screenshots-desktop",
+    out_dir="/path/to/QA/project_qa/screenshots-desktop",
     is_mobile=False
 )
 
@@ -121,7 +121,7 @@ with sync_playwright() as p:
 ```bash
 pip install playwright
 playwright install
-python run_goodteam.py
+python run_project.py
 ```
 
 ---
@@ -150,7 +150,7 @@ python run_goodteam.py
 * **开发环境推荐进行 Mock 拦截**：在本地开发验证或日常 UI 测试时，强烈建议在后端服务或网络拦截层将这些高成本接口的响应进行 Mock，或者在测试环境中切换到低成本的开发模型（如小参数本地模型）作为出口。
 
 ### 🔒 认证与验证码规避 (Auth & Security)
-* **使用专属的 QA/Test 账号**：进行第三方认证登录（如 Clerk/Auth0）的自动化测试时，请在测试数据库中为其注册专门 of QA 账号。**严禁使用任何真实的生产管理员/用户账号**进行自动化模拟。
+* **使用专属的 QA/Test 账号**：进行第三方认证登录（如 Clerk/Auth0）的自动化测试时，请在测试数据库中为其注册专门的 QA 账号。**严禁使用任何真实的生产管理员/用户账号**进行自动化模拟。
 * **规避防刷机制（Rate Limit / CAPTCHA）**：在生产环境中运行此脚本可能会因为高频点击或无 Cookie 访问，直接触发 Cloudflare 等安全防护机制或 IP 封禁。因此，此脚本**仅建议在不受防御限制的本地开发机或专用 Staging 环境中执行**。
 
 ### 🚫 严禁对生产环境执行写操作
@@ -160,4 +160,4 @@ python run_goodteam.py
 
 ## 📄 开源许可证
 
-本项目基于 MIT 许可证开源 - 详见 [LICENSE](LICENSE) 文件。
+本项目基于 MIT 许可证开源 - 详见 [LICENSE](LICENSE) file for details。
