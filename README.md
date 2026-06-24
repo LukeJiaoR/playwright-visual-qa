@@ -1,72 +1,89 @@
-# Universal Web Visual QA & Screenshot Automation Framework
+# Playwright Visual QA Framework 🚀
 
-这套框架基于 **Playwright (Python)** 构建，旨在帮助开发人员及 AI 代理快速在新项目中实现多分辨率、多终端（Desktop/Mobile）的 UI 视觉快照测试和自动化交互验证。
+> A lightweight, highly decoupled, and project-agnostic visual QA & screenshot automation testing framework built on top of Playwright.
 
-框架采用了 **“通用基类 (BaseQA) + 项目专属子类 (ProjectQA)”** 的模块化设计，将底层的浏览器控制、视口模拟、防抖截图等基础设施与上层的项目业务逻辑完全解耦。
+[![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org)
+[![Playwright](https://img.shields.io/badge/playwright-tested-green.svg)](https://playwright.dev/python/)
+[![License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
+
+[简体中文](README.zh-CN.md) | **English**
 
 ---
 
-## 📂 推荐的代码组织结构
+## 🌟 Key Features
 
-为了保持通用框架代码仓库的纯净，建议在项目群的共享根目录下（如 `codeAi/`）将框架与具体项目的自动化脚本分离：
+* **Project-Agnostic Core (`BaseQA`)**: Abstracted Playwright session setups, device/viewport configs, smart wait handling, and image capture capabilities.
+* **Smart Anti-Shake Snapshotting**: Integrated dynamic rendering waits (`1500ms` debounce) ensuring charts, WebGL animations, and layout flows stabilize before capturing.
+* **Automatic Device Simulation**: Toggles desktop views or simulated mobile profiles (iPhone viewports, Safari/WebKit User-Agent injection).
+* **Loosely Coupled Architecture**: Keeps the framework codebase clean and publish-ready, completely separating it from project-specific code and output images.
+
+---
+
+## 📂 Recommended Codebase Architecture
+
+For clean scaling, we recommend separating this framework library from your specific project testing configurations:
 
 ```text
-codeAi/
-├── universal-qa/         # 【本框架仓库】只包含通用核心组件，无任何项目业务代码
+your-root-workspace/
+├── universal-qa/         # [This Repository] Only contains core helper libraries
 │   ├── README.md
-│   └── base_qa.py        # 通用核心基类
+│   ├── README.zh-CN.md
+│   └── base_qa.py        # Generic BaseQA parent class
 │
-└── QA/                   # 【你的 QA 工作区】存放各个项目的实际测试脚本与截图输出
-    └── ziwei/            # 以紫微项目为例
-        ├── ziwei_qa.py   # 继承 BaseQA 的业务子类
-        ├── ziwei-pc-web/ # PC 端截图运行目录（包含截图输出）
-        └── ziwei-mobile/# 移动端端截图运行目录（包含截图输出）
+└── QA/                   # [Your Testing Workspace] Untracked scripts & image outputs
+    └── <your-project>/   # e.g., ziwei
+        ├── project_qa.py # Inherits BaseQA, overrides project-specific UI flow
+        ├── pc-web/       # Desktop QA test directory & screenshots
+        └── mobile/       # Mobile QA test directory & screenshots
 ```
 
 ---
 
-## 🚀 其它项目如何快速接入？
+## 🚀 Quick Start
 
-假设你需要为同级目录下的 `GoodTeam` 项目在 `QA/` 工作区下编写自动化截图测试：
+Here is how you can implement visual QA for a project named `GoodTeam` in 3 simple steps.
 
-### 第一步：创建项目 QA 目录并编写子类 `goodteam_qa.py`
-在 `QA/` 之下新建 `goodteam` 目录，并创建 `goodteam_qa.py`。继承 `base_qa.py` 中的 `BaseQA`，并在开头引入通用框架的路径：
+### Step 1: Create your project-specific class `goodteam_qa.py`
+Create a folder named `goodteam/` under your `QA/` workspace, and define the custom selector mappings and flow:
 
 ```python
 import sys
-# 1. 引入通用框架的绝对路径
-sys.path.append("/Users/luke/WorkSpace/codeAi/universal-qa")
+# 1. Add the path to universal-qa directory
+sys.path.append("/absolute/path/to/universal-qa")
 
 from base_qa import BaseQA
 
 class GoodTeamQA(BaseQA):
     def __init__(self, base_url="http://localhost:3000", out_dir="qa-screenshots", is_mobile=False, viewport=None):
-        # 2. 初始化基类参数
         super().__init__(base_url, out_dir, is_mobile, viewport)
 
     def login(self, page, username, password):
-        """定义专属的登录交互"""
+        """Project-specific login workflow"""
         page.fill("input[name='username']", username)
         page.fill("input[name='password']", password)
         page.click("button[type='submit']")
-        self.wait(page, 1000)
+        self.wait(page, 1000) # Utilizes BaseQA wait helper
+
+    def navigate_to_dashboard(self, page):
+        page.click("text=Go to Dashboard")
+        self.wait(page, 800)
 ```
 
-### 第二步：编写执行脚本 `run_goodteam.py`
-在 `QA/goodteam/` 下创建执行脚本（如 `run_goodteam.py`）：
+### Step 2: Write your execution script `run_goodteam.py`
+In `QA/goodteam/`, write a script to orchestrate the test:
 
 ```python
 import sys
-# 1. 引入通用框架路径与本项目业务逻辑路径
-sys.path.append("/Users/luke/WorkSpace/codeAi/universal-qa")
-sys.path.append("/Users/luke/WorkSpace/codeAi/QA/goodteam")
+sys.path.append("/absolute/path/to/universal-qa")
+sys.path.append("/absolute/path/to/QA/goodteam")
 
 from goodteam_qa import GoodTeamQA
 from playwright.sync_api import sync_playwright
 
+# Setup for desktop visual QA
 qa = GoodTeamQA(
     base_url="http://localhost:3000",
-    out_dir="/Users/luke/WorkSpace/codeAi/QA/goodteam/qa-screenshots", # 指定输出路径到专属工作区
+    out_dir="/absolute/path/to/QA/goodteam/screenshots-desktop",
     is_mobile=False
 )
 
@@ -75,55 +92,61 @@ with sync_playwright() as p:
     ctx = qa.create_context(browser)
     page = ctx.new_page()
 
-    # 2. 执行截图和验证
+    # 1. Capture landing page
     page.goto(qa.base_url)
-    qa.shot(page, "01_landing")
+    qa.shot(page, "01_landing_page")
+
+    # 2. Capture dashboard
+    qa.login(page, "admin", "password123")
+    qa.shot(page, "02_dashboard")
 
     ctx.close()
     browser.close()
+    
+    # List generated screenshots
     qa.list_results()
 ```
 
----
-
-## 🛠️ 核心基类 (BaseQA) 常用 API 介绍
-
-在子类中，你可以直接使用 `BaseQA` 提供的以下高复用方法：
-
-* **`self.shot(page, name, full=True)`**
-  * **作用**：对当前页面截图。
-  * **特性**：对渲染动作执行了微等待，确保图表、AI 动画等完全稳定后再截图，支持生成长网页全景图 (`full_page=True`)。
-* **`self.wait(page, ms=800)`**
-  * **作用**：控制交互节奏，休眠指定毫秒。
-* **`self.create_context(browser)`**
-  * **作用**：自动根据 `is_mobile` 参数决定是否注入移动端特定的 `User Agent` 和 `viewport` 尺寸。
-* **`self.list_results()`**
-  * **作用**：自动统计目标文件夹中生成的 `.png` 文件，并在控制台以列表形式打印各截图的大小（KB），方便快速校验结果。
-
----
-
-## ⚠️ 运行前置安全与环境要求 (Safety & Environment)
-
-自动化测试脚本因为会模拟真实的点击和表单提交，在运行前请务必确认满足以下安全要求，以防止**高昂的 API 费用账单**或**敏感数据泄露**：
-
-### 1. 💰 接口成本保护与额度防护 (LLM & Billing Cost Protection)
-* **避免对高成本 API 或大语言模型接口进行高频并发测试**：如果交互脚本中涉及调用大语言模型（LLM）接口、复杂云计算或其他按量计费的第三方 API，在持续集成（CI）的高频触发或并发脚本中运行测试可能在短时间内消耗大量的 API 额度，产生高昂账单。
-* **开发环境推荐进行 Mock 拦截**：在本地开发验证或日常 UI 测试时，强烈建议在后端服务或网络拦截层将这些高成本接口的响应进行 Mock，或者在测试环境中切换到低成本的开发模型（如小参数本地模型）作为出口。
-
-### 2. 🔒 认证与验证码规避 (Auth & Security)
-* **使用专属的 QA/Test 账号**：进行第三方认证登录（如 Clerk/Auth0）的自动化测试时，请在测试数据库中为其注册专门的 QA 账号。**严禁使用任何真实的生产管理员/用户账号**进行自动化模拟。
-* **规避防刷机制（Rate Limit / CAPTCHA）**：在生产环境中运行此脚本可能会因为高频点击或无 Cookie 访问，直接触发 Cloudflare 等安全防护机制或 IP 封禁。因此，此脚本**仅建议在不受防御限制的本地开发机或专用 Staging 环境中执行**。
-
-### 3. 🚫 严禁对生产环境执行写操作
-* 在 `goodteam_qa.py` 或 `ziwei_qa.py` 子类中编写流程时，如果涉及付款支付、删除数据、修改设置等敏感动作，**必须在执行前判断是否处于生产域名**。如果检测到生产 URL，应立即中止并抛出异常，防止污染真实生产业务。
-
----
-
-## 📦 环境依赖
-
-使用前请确保安装了 Playwright 驱动：
+### Step 3: Install dependencies and run
 ```bash
 pip install playwright
 playwright install
+python run_goodteam.py
 ```
-```
+
+---
+
+## 🛠️ BaseQA API Reference
+
+You can access the following helper methods directly inside your subclass:
+
+| API Method | Parameters | Description |
+| :--- | :--- | :--- |
+| `__init__` | `base_url`, `out_dir`, `is_mobile`, `viewport` | Initializes target URL, output folders, responsive setups, and UA injections. |
+| `create_context(browser)` | `browser` | Returns a Playwright BrowserContext populated with custom viewports and User-Agents. |
+| `shot(page, name, full=True)` | `page` (Page), `name` (str), `full` (bool) | Takes a screenshot after a short debounce to allow layout/render settling. Supports full-page scrolling. |
+| `wait(page, ms=800)` | `page` (Page), `ms` (int) | Synchronously pauses the flow for the specified milliseconds to control page pacing. |
+| `list_results()` | None | Scans the output directory and logs all `.png` files along with their file sizes in KB. |
+
+---
+
+## ⚠️ Safety & Environment Requirements
+
+Automated visual QA scripts simulate actual click events and form submissions. Please ensure the following constraints are followed to avoid **unintentional billing charges** or **security leaks**:
+
+### 1. 💰 API Cost & LLM Protection
+* **Avoid High-Cost Billing APIs in CI**: If your UI workflows trigger backend calls to costly Third-Party APIs (such as Large Language Model APIs, paid geocoders, etc.), running these QA suites on high-frequency CI pipelines might quickly exhaust your API quotas and cause unexpectedly high bills.
+* **Mock Responses in Development**: For local visual/UI regressions, strongly consider mocking expensive API endpoints on the server/network-interceptor layer or switching to cheaper test-only credentials.
+
+### 2. 🔒 Sandbox Credentials & Auth
+* **Use Dedicated Test Credentials**: When testing authenticated states (e.g., Clerk, Auth0, Okta), configure mock accounts in your test database. **Never hardcode real administrator or customer passwords**.
+* **Bypass Defensive Guardrails**: Executing raw Playwright scripts on real production setups might trigger Cloudflare Rate Limiting, CAPTCHAs, or IP bans. These scripts are exclusively recommended for **local development servers or Staging sandboxes**.
+
+### 3. 🚫 No Write Operations in Production
+* If your subclass flows trigger write operations (such as deleting items, submitting real order invoices, etc.), always implement a domain check. If a production URL is detected, raise an exception to halt the script instantly.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
