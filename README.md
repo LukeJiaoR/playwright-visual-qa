@@ -136,6 +136,24 @@ python run_project.py
 | `wait(page, ms=800)` | `page`, `ms` | Synchronously pauses the flow for the specified milliseconds to control page pacing. |
 | `list_results()` | None | Scans the output directory and logs all `.png` files along with their file sizes in KB. |
 
+### 📱 Built-in Device & Size Presets
+
+When configuring the run (via `QAConfig` or when initializing `BaseQA`), you can supply the `device` parameter to load highly accurate standard viewports, device scale factors, and touchscreen emulation:
+
+| Preset Alias | Target Emulated Device | Resolution / Viewport | Device Type |
+| :--- | :--- | :--- | :--- |
+| `desktop` | Generic PC Desktop | 1280 x 800 | Desktop |
+| `desktop_1080p`| Full HD Monitor | 1920 x 1080 | Desktop |
+| `iphone` | iPhone 12 | 390 x 844 | Mobile (Touch) |
+| `iphone_se` | iPhone SE | 375 x 667 | Mobile (Touch) |
+| `iphone_pro_max`| iPhone 14 Pro Max | 430 x 932 | Mobile (Touch) |
+| `android` | Google Pixel 5 | 393 x 851 | Mobile (Touch) |
+| `android_large`| Samsung Galaxy S9+ | 360 x 740 | Mobile (Touch) |
+| `ipad` | iPad Mini | 768 x 1024 | Tablet (Touch) |
+| `ipad_pro` | iPad Pro 11 | 834 x 1194 | Tablet (Touch) |
+
+You can also pass any standard official Playwright device name (e.g., `"iPhone 14 Pro Max"`, `"Galaxy S9+"`) directly to `device` to fetch its configurations dynamically.
+
 ---
 
 ## ⚠️ Safety & Environment Requirements

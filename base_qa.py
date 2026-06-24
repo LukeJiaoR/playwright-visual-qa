@@ -1,43 +1,62 @@
 import os
+from universal_qa.config import QAConfig
+from universal_qa.snapshotter import QASnapshotter
+from universal_qa.reporter import QAReporter
 
 class BaseQA:
     """
     Universal Base QA class for Playwright-based screenshot automation.
-    Handles device/viewport setup, screenshot capture, wait management, and results listing.
+    Delegates implementation to universal_qa package modules for backward compatibility.
     """
     def __init__(self, base_url, out_dir="qa-screenshots", is_mobile=False, viewport=None):
-        self.base_url = base_url
-        self.out_dir = out_dir
-        self.is_mobile = is_mobile
-        
-        if viewport:
-            self.viewport = viewport
-        else:
-            self.viewport = {"width": 390, "height": 844} if is_mobile else {"width": 1280, "height": 800}
-            
-        self.user_agent = (
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
-            if is_mobile else None
+        # Delegate initialization to the modular QAConfig
+        self.config = QAConfig(
+            base_url=base_url,
+            out_dir=out_dir,
+            is_mobile=is_mobile,
+            viewport=viewport
         )
-        os.makedirs(self.out_dir, exist_ok=True)
+        
+        # Expose properties to ensure full backward compatibility
+        self.base_url = self.config.base_url
+        self.out_dir = self.config.out_dir
+        self.is_mobile = self.config.is_mobile
+        self.viewport = self.config.viewport
+        self.user_agent = self.config.user_agent
+        
+        # Instantiate modular components
+        self._snapshotter = QASnapshotter(self.out_dir)
+        self._reporter = QAReporter(self.out_dir)
 
     def create_context(self, browser):
+        """
+        Creates context using current viewport and user_agent config.
+        """
         context_args = {"viewport": self.viewport}
         if self.user_agent:
             context_args["user_agent"] = self.user_agent
+        if self.is_mobile:
+            context_args["is_mobile"] = True
+            context_args["has_touch"] = True
         return browser.new_context(**context_args)
 
     def wait(self, page, ms=800):
+        """
+        Performs pacing wait.
+        """
         page.wait_for_timeout(ms)
 
     def shot(self, page, name, full=True):
-        path = f"{self.out_dir}/{name}.png"
-        page.screenshot(path=path, full_page=full)
-        print(f"  ✓  {name}.png")
+        """
+        Takes screenshot. Delegates to QASnapshotter.
+        """
+        # Set wait_ms=0 to preserve legacy immediate screenshot behavior in BaseQA
+        self._snapshotter.shot(page, name, full=full, wait_ms=0)
 
     def list_results(self):
-        files = sorted(f for f in os.listdir(self.out_dir) if f.endswith(".png"))
-        print(f"\n✅  Done — {len(files)} screenshots saved to {self.out_dir}/")
-        for f in files:
-            size_kb = os.path.getsize(f"{self.out_dir}/{f}") // 1024
-            print(f"     {f}  ({size_kb}KB)")
+        """
+        Lists screenshots in terminal and generates HTML interactive report.
+        """
+        self._reporter.list_results()
+        # Generates premium HTML preview report alongside
+        self._reporter.generate_html_report()

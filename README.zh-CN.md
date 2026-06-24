@@ -138,6 +138,24 @@ python run_project.py
 | `wait(page, ms=800)` | `page` (Page), `ms` (int) | 控制交互节奏的暂停等待（单位：毫秒）。 |
 | `list_results()` | 无 | 扫描输出文件夹，统计生成的 `.png` 文件个数并在控制台输出包含文件大小（KB）的列表。 |
 
+### 📱 内置机型与分辨率预设别名 (Built-in Presets)
+
+在配置运行环境（使用 `QAConfig` 或初始化 `BaseQA`）时，您可以通过直接指定 `device` 别名，来自动加载精确的视口宽高、设备像素比（DPI）以及原生的触摸屏和移动端仿真参数：
+
+| 预设别名 (Alias) | 对应仿真目标设备 | 对应分辨率 / 视口宽高 | 设备类型 |
+| :--- | :--- | :--- | :--- |
+| `desktop` | 普通 PC 桌面端 | 1280 x 800 | 桌面电脑 |
+| `desktop_1080p`| 1080P 高清显示器 | 1920 x 1080 | 桌面电脑 |
+| `iphone` | iPhone 12 | 390 x 844 | 手机 (支持触屏) |
+| `iphone_se` | iPhone SE | 375 x 667 | 手机 (支持触屏) |
+| `iphone_pro_max`| iPhone 14 Pro Max | 430 x 932 | 手机 (支持触屏) |
+| `android` | Google Pixel 5 | 393 x 851 | 手机 (支持触屏) |
+| `android_large`| Samsung Galaxy S9+ | 360 x 740 | 手机 (支持触屏) |
+| `ipad` | iPad Mini | 768 x 1024 | 平板 (支持触屏) |
+| `ipad_pro` | iPad Pro 11 | 834 x 1194 | 平板 (支持触屏) |
+
+同时，您也可以将 Playwright 官方支持的任何标准设备名称（如 `"iPhone 14 Pro Max"`、`"iPad Pro 11"`）直接传给 `device` 参数来动态加载配置。
+
 ---
 
 ## ⚠️ 运行前置安全与环境要求
