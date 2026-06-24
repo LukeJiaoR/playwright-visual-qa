@@ -27,6 +27,7 @@ class BaseQA:
         # Instantiate modular components
         self._snapshotter = QASnapshotter(self.out_dir)
         self._reporter = QAReporter(self.out_dir)
+        self._shot_count = 0
 
     def create_context(self, browser):
         """
@@ -48,9 +49,17 @@ class BaseQA:
 
     def shot(self, page, name, full=True, wait_ms=1500):
         """
-        Takes screenshot. Delegates to QASnapshotter.
+        Takes screenshot. Automatically prepends sequential counter prefix if not already present.
         """
-        self._snapshotter.shot(page, name, full=full, wait_ms=wait_ms)
+        self._shot_count += 1
+        
+        import re
+        if not re.match(r"^\d+[-_]", name):
+            formatted_name = f"{self._shot_count:02d}_{name}"
+        else:
+            formatted_name = name
+            
+        self._snapshotter.shot(page, formatted_name, full=full, wait_ms=wait_ms)
 
     def list_results(self):
         """
