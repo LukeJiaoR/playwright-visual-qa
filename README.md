@@ -51,6 +51,15 @@ graph TD
     style QA fill:#efe,stroke:#9f9,stroke-width:2px
 ```
 
+## 📦 Installation
+
+You can install this framework directly as a local Python library, allowing you to import `BaseQA` or `universal_qa` components globally in any project without writing `sys.path.append` boilerplate:
+
+```bash
+# Install locally in editable mode (recommended for developers)
+pip install -e .
+```
+
 ---
 
 ## 🚀 Quick Start

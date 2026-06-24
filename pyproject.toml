@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "playwright-visual-qa"
+version = "0.1.0"
+description = "A lightweight, highly decoupled, and project-agnostic visual QA & screenshot automation testing engine built on top of Playwright."
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Luke", email = "luke@example.com"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = [
+    "playwright>=1.30.0",
+]
+
+[tool.setuptools]
+# Package folder and legacy compat top-level module to deploy into site-packages
+packages = ["universal_qa"]
+py-modules = ["base_qa"]

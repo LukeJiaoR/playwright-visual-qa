@@ -51,6 +51,15 @@ graph TD
     style QA fill:#efe,stroke:#9f9,stroke-width:2px
 ```
 
+## 📦 安装指引
+
+您现在可以直接将此框架作为本地 Python 第三方库安装，方便您在任何测试项目中全局直接 `import` 引用 `BaseQA` 或 `universal_qa` 模块，无需再在脚本里编写繁琐的 `sys.path.append` 代码：
+
+```bash
+# 以可编辑模式本地安装（推荐，便于框架代码实时生效）
+pip install -e .
+```
+
 ---
 
 ## 🚀 快速上手
