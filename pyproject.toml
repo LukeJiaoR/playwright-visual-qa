@@ -26,3 +26,6 @@ dependencies = [
 # Package folder and legacy compat top-level module to deploy into site-packages
 packages = ["universal_qa"]
 py-modules = ["base_qa"]
+
+[project.scripts]
+visual-qa = "universal_qa.cli:main"
