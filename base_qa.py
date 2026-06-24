@@ -46,12 +46,11 @@ class BaseQA:
         """
         page.wait_for_timeout(ms)
 
-    def shot(self, page, name, full=True):
+    def shot(self, page, name, full=True, wait_ms=1500):
         """
         Takes screenshot. Delegates to QASnapshotter.
         """
-        # Set wait_ms=0 to preserve legacy immediate screenshot behavior in BaseQA
-        self._snapshotter.shot(page, name, full=full, wait_ms=0)
+        self._snapshotter.shot(page, name, full=full, wait_ms=wait_ms)
 
     def list_results(self):
         """
