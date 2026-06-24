@@ -33,7 +33,19 @@ qa = ProjectQA(
 )
 
 # 2. Automated screenshots routes list
-# WARNING: All-automatic detection might miss some pages. Edit this list as needed.
+# Supports simple route string or declarative dictionary actions for tab/btn naming:
+# ROUTES = [
+#     "/",
+#     "/about",
+#     {{
+#         "path": "/settings",
+#         "actions": [
+#             {{"default": "default"}},
+#             {{"tab": "profile", "click": "text=Profile"}},
+#             {{"btn": "save", "click": "button:has-text('Save')"}}
+#         ]
+#     }}
+# ]
 ROUTES = [
 {routes_list}
 ]
@@ -46,30 +58,66 @@ with sync_playwright() as p:
     ctx = qa.create_context(browser)
     page = ctx.new_page()
 
-    for idx, route in enumerate(ROUTES):
-        # Handle dynamic routing placeholder warning
-        if ":" in route or "TODO" in route:
-            print(f"  [Jumped] Dynamic routing placeholder found: {{route}}. Please replace with valid data manually.")
-            continue
-
-        target_url = qa.base_url + route
-        print(f"  → Navigating: {{target_url}}")
-        try:
-            page.goto(target_url, wait_until="networkidle", timeout=15000)
-        except Exception as e:
-            # Fallback if networkidle timeouts
-            try:
-                page.goto(target_url, wait_until="domcontentloaded", timeout=10000)
-            except Exception as ex:
-                print(f"  ⚠️ Navigation failed for {{route}}: {{ex}}")
+    for idx, item in enumerate(ROUTES):
+        # A. Handle standard string routes
+        if isinstance(item, str):
+            route = item
+            if ":" in route or "TODO" in route:
+                print(f"  [Jumped] Dynamic routing placeholder found: {{route}}. Please replace manually.")
                 continue
 
-        # Intelligent anti-shake wait & capture
-        qa.wait(page, 1500)
-        
-        # Format filename cleanly
-        safe_name = f"{{idx:02d}}_{{route.replace('/', '_').strip('_') or 'home'}}"
-        qa.shot(page, safe_name)
+            target_url = qa.base_url + route
+            print(f"  → Navigating: {{target_url}}")
+            try:
+                page.goto(target_url, wait_until="networkidle", timeout=15000)
+            except Exception as e:
+                try:
+                    page.goto(target_url, wait_until="domcontentloaded", timeout=10000)
+                except Exception as ex:
+                    print(f"  ⚠️ Navigation failed for {{route}}: {{ex}}")
+                    continue
+
+            safe_name = f"{{idx:02d}}_{{route.replace('/', '_').strip('_') or 'home'}}"
+            qa.shot(page, safe_name)
+
+        # B. Handle declarative dictionary actions (Tabs / Buttons)
+        elif isinstance(item, dict):
+            path = item.get("path")
+            target_url = qa.base_url + path
+            print(f"  → Navigating deep layout: {{target_url}}")
+            try:
+                page.goto(target_url, wait_until="networkidle", timeout=15000)
+            except Exception as e:
+                try:
+                    page.goto(target_url, wait_until="domcontentloaded", timeout=10000)
+                except Exception as ex:
+                    print(f"  ⚠️ Navigation failed for {{path}}: {{ex}}")
+                    continue
+
+            prefix = path.replace("/", "_").strip("_") or "home"
+            actions = item.get("actions", [])
+            
+            # Loop and execute inner actions
+            for action in actions:
+                if "default" in action:
+                    safe_name = f"{{idx:02d}}_{{prefix}}__default"
+                    qa.shot(page, safe_name)
+                elif "tab" in action:
+                    print(f"    - Switching Tab: [{{action['tab']}}]")
+                    try:
+                        page.click(action["click"])
+                        safe_name = f"{{idx:02d}}_{{prefix}}__tab_{{action['tab']}}"
+                        qa.shot(page, safe_name)
+                    except Exception as e:
+                        print(f"    ⚠️ Failed to switch tab {{action['tab']}}: {{e}}")
+                elif "btn" in action:
+                    print(f"    - Clicking Button: [{{action['btn']}}]")
+                    try:
+                        page.click(action["click"])
+                        safe_name = f"{{idx:02d}}_{{prefix}}__btn_{{action['btn']}}"
+                        qa.shot(page, safe_name)
+                    except Exception as e:
+                        print(f"    ⚠️ Failed to click button {{action['btn']}}: {{e}}")
 
     ctx.close()
     browser.close()

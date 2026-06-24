@@ -274,11 +274,13 @@ class QAReporter:
         
         <div class="grid">
 """
+        import time
+        timestamp = int(time.time())
         for f in files:
             size_kb = os.path.getsize(f"{self.out_dir}/{f}") // 1024
             html_content += f"""            <div class="card">
                 <div class="image-wrapper">
-                    <img src="{f}" alt="{f}" onclick="openModal('{f}')" style="cursor: zoom-in;">
+                    <img src="{f}?t={timestamp}" alt="{f}" onclick="openModal('{f}?t={timestamp}')" style="cursor: zoom-in;">
                 </div>
                 <div class="card-details">
                     <div class="info-header">
@@ -286,7 +288,7 @@ class QAReporter:
                         <span class="size">{size_kb} KB</span>
                     </div>
                     <div class="actions">
-                        <a href="{f}" target="_blank" class="btn btn-primary">在新标签页打开</a>
+                        <a href="{f}?t={timestamp}" target="_blank" class="btn btn-primary">在新标签页打开</a>
                     </div>
                 </div>
             </div>
@@ -317,4 +319,201 @@ class QAReporter:
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(html_content)
         print(f"  ✓  HTML Report generated: {report_path}")
+        
+        # Automatically refresh the global history index portal
+        self.generate_index_report()
+        return report_path
+
+    def generate_index_report(self):
+        """
+        Scans parent directory for all run_* directories containing report.html
+        and scaffolds/updates a global index.html dashboard portal.
+        """
+        # Ensure we work with absolute path to locate parent dir
+        abs_out_dir = os.path.abspath(self.out_dir)
+        parent_dir = os.path.dirname(abs_out_dir)
+        
+        # If parent_dir is empty or same, fallback
+        if not parent_dir or parent_dir == abs_out_dir:
+            return None
+            
+        # Scan all subdirectories that contain report.html
+        run_dirs = []
+        try:
+            for entry in os.scandir(parent_dir):
+                if entry.is_dir() and entry.name.startswith("run_"):
+                    report_file = os.path.join(entry.path, "report.html")
+                    if os.path.exists(report_file):
+                        # Get creation/modification time of the folder or report
+                        mtime = os.path.getmtime(report_file)
+                        import time
+                        formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(mtime))
+                        run_dirs.append({
+                            "name": entry.name,
+                            "path": entry.name,
+                            "report_url": f"{entry.name}/report.html",
+                            "time": formatted_time,
+                            "mtime": mtime
+                        })
+        except Exception as e:
+            print(f"⚠️  Failed to scan history directories for index.html: {e}")
+            return None
+            
+        if not run_dirs:
+            return None
+            
+        # Sort runs by modification time, newest first
+        run_dirs.sort(key=lambda x: x["mtime"], reverse=True)
+        
+        # Render dynamic runs list items
+        runs_html = ""
+        for idx, run in enumerate(run_dirs):
+            active_class = "active" if idx == 0 else ""
+            runs_html += f"""            <li class="run-item {active_class}" onclick="loadRun(this, '{run['report_url']}')">
+                <div class="run-name">{run['name']}</div>
+                <div class="run-date">运行于: {run['time']}</div>
+            </li>
+"""
+            
+        # Build global index HTML
+        index_content = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual QA Test Runs Index Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {{
+            --bg: #0b0f19;
+            --sidebar-bg: #111827;
+            --card-bg: rgba(22, 28, 45, 0.6);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --border: rgba(255, 255, 255, 0.08);
+        }}
+        * {{
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }}
+        body {{
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }}
+        .sidebar {{
+            width: 320px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            overflow-y: auto;
+        }}
+        .sidebar h2 {{
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            background: linear-gradient(to right, #a5b4fc, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }}
+        .run-list {{
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }}
+        .run-item {{
+            padding: 14px 16px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }}
+        .run-item:hover {{
+            border-color: rgba(99, 102, 241, 0.4);
+            background: rgba(99, 102, 241, 0.05);
+            transform: translateY(-2px);
+        }}
+        .run-item.active {{
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
+        }}
+        .run-item.active .run-name {{
+            color: white;
+        }}
+        .run-item.active .run-date {{
+            color: rgba(255, 255, 255, 0.7);
+        }}
+        .run-name {{
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            word-break: break-all;
+        }}
+        .run-date {{
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }}
+        .main-content {{
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }}
+        iframe {{
+            border: none;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+        }}
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>📷 Runs History</h2>
+        <ul class="run-list">
+{runs_html}
+        </ul>
+    </div>
+    <div class="main-content">
+        <iframe id="reportFrame" src=""></iframe>
+    </div>
+    <script>
+        function loadRun(element, reportUrl) {{
+            document.querySelectorAll('.run-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+            document.getElementById('reportFrame').src = reportUrl;
+        }}
+        
+        // Auto select first run
+        window.onload = () => {{
+            const firstRun = document.querySelector('.run-item');
+            if (firstRun) {{
+                firstRun.click();
+            }}
+        }}
+    </script>
+</body>
+</html>
+"""
+        index_path = os.path.join(parent_dir, "index.html")
+        try:
+            with open(index_path, "w", encoding="utf-8") as f:
+                f.write(index_content)
+            print(f"  ✓  Global Runs Index updated: {index_path}")
+        except Exception as e:
+            print(f"⚠️  Failed to write global index.html: {e}")
+            
+        return index_path
         return report_path
