@@ -270,6 +270,109 @@ def cmd_init(args):
     print("👉 Edit 'run_project.py' to adjust your route list.")
     print("👉 Run testing suite by executing: python3 run_project.py")
 
+def cmd_shot(args):
+    import time
+    from urllib.parse import urlparse
+    
+    # 1. Parse target URL
+    input_url = args.url
+    if not input_url.startswith(("http://", "https://")):
+        input_url = "https://" + input_url
+        
+    parsed = urlparse(input_url)
+    base_url = f"{parsed.scheme}://{parsed.netloc}"
+    
+    # Path
+    route = parsed.path
+    if parsed.query:
+        route += "?" + parsed.query
+        
+    if not route:
+        route = "/"
+        
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    base_out_dir = os.path.join(os.getcwd(), "qa-screenshots")
+    out_dir = os.path.join(base_out_dir, f"run_{timestamp}")
+    os.makedirs(out_dir, exist_ok=True)
+    
+    # 2. Get route list
+    routes = []
+    if args.sitemap:
+        sitemap_url = args.sitemap
+        print(f"📡 Mode: Crawl Sitemap XML: {sitemap_url}")
+        routes = fetch_sitemap_routes(sitemap_url, base_url)
+    else:
+        print(f"📡 Mode: Single Page Instant Capture")
+        routes = [route]
+        
+    print(f"📸 Target Base URL: {base_url}")
+    print(f"📂 Output Directory: {out_dir}")
+    print(f"🚀 Found {len(routes)} route(s) to capture...")
+    
+    # 3. Instantiate QA wrapper
+    from universal_qa.config import QAConfig
+    from universal_qa.snapshotter import QASnapshotter
+    from universal_qa.reporter import QAReporter
+    
+    class CliQA:
+        def __init__(self, base_url, out_dir, is_mobile=False):
+            self.config = QAConfig(base_url=base_url, out_dir=out_dir, is_mobile=is_mobile)
+            self.viewport = self.config.viewport
+            self.user_agent = self.config.user_agent
+            self.is_mobile = self.config.is_mobile
+            self._snapshotter = QASnapshotter(out_dir)
+            self._reporter = QAReporter(out_dir)
+            self._shot_count = 0
+            
+        def create_context(self, browser):
+            context_args = {"viewport": self.viewport}
+            if self.user_agent:
+                context_args["user_agent"] = self.user_agent
+            if self.is_mobile:
+                context_args["is_mobile"] = True
+                context_args["has_touch"] = True
+            return browser.new_context(**context_args)
+            
+        def shot(self, page, name, full=True, wait_ms=1500):
+            self._shot_count += 1
+            formatted_name = f"{self._shot_count:02d}_{name}"
+            return self._snapshotter.shot(page, formatted_name, full=full, wait_ms=wait_ms)
+            
+        def list_results(self):
+            self._reporter.list_results()
+            self._reporter.generate_html_report()
+
+    qa = CliQA(base_url=base_url, out_dir=out_dir, is_mobile=args.mobile)
+    
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        ctx = qa.create_context(browser)
+        page = ctx.new_page()
+        
+        for idx, r in enumerate(routes):
+            target_url = base_url + r
+            print(f"  → [{idx+1}/{len(routes)}] Navigating: {target_url}")
+            try:
+                page.goto(target_url, wait_until="networkidle", timeout=15000)
+            except Exception:
+                try:
+                    page.goto(target_url, wait_until="domcontentloaded", timeout=10000)
+                except Exception as ex:
+                    print(f"  ⚠️ Navigation failed: {ex}")
+                    continue
+            
+            # Safe filename mapping
+            safe_name = r.replace("/", "_").strip("_").replace("?", "_").replace("&", "_").replace("=", "_") or "home"
+            qa.shot(page, safe_name, full=args.full, wait_ms=args.wait)
+            
+        ctx.close()
+        browser.close()
+        
+    # Generate HTML Report & Update Index
+    qa.list_results()
+    print(f"\n🎉 Done! HTML Report generated. Open Index to view: {os.path.join(base_out_dir, 'index.html')}")
+
 def main():
     parser = argparse.ArgumentParser(
         description="Playwright Visual QA Scaffold CLI tool.",
@@ -285,10 +388,21 @@ def main():
     init_parser.add_argument("-f", "--framework", choices=["nextjs", "generic"], help="Force specify framework rules. Auto-detects if omitted.")
     init_parser.add_argument("-s", "--sitemap", help="Provide a Sitemap URL (e.g. http://localhost:3000/sitemap.xml) to fetch routes from.")
     
+    # shot command
+    shot_parser = subparsers.add_parser("shot", help="Take instant screenshots of a single website or crawl a sitemap URL.")
+    shot_parser.add_argument("url", help="Target URL to navigate and capture (e.g., https://example.com/about)")
+    shot_parser.add_argument("-m", "--mobile", action="store_true", help="Enable mobile emulation layout")
+    shot_parser.add_argument("-s", "--sitemap", help="Provide a Sitemap XML URL to crawl and capture all listed routes")
+    shot_parser.add_argument("-f", "--full", action="store_true", default=True, help="Take full-page screenshot (default: True)")
+    shot_parser.add_argument("--no-full", dest="full", action="store_false", help="Disable full-page screenshot (take viewport only)")
+    shot_parser.add_argument("-w", "--wait", type=int, default=1500, help="Debounce wait time in milliseconds before screenshot (default: 1500)")
+    
     args = parser.parse_args()
     
     if args.command == "init":
         cmd_init(args)
+    elif args.command == "shot":
+        cmd_shot(args)
 
 if __name__ == "__main__":
     main()
