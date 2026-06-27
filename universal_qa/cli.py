@@ -126,6 +126,71 @@ with sync_playwright() as p:
 qa.list_results()
 """
 
+def explore_online_routes(base_url, start_route, max_pages=20):
+    """
+    Crawls the starting page and extracts all same-origin links to crawl.
+    """
+    from playwright.sync_api import sync_playwright
+    from urllib.parse import urljoin, urlparse
+    
+    print(f"  🔍 Exploring links on starting page: {base_url + start_route} ...")
+    discovered = {start_route}
+    
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        ctx = browser.new_context()
+        page = ctx.new_page()
+        try:
+            page.goto(base_url + start_route, wait_until="networkidle", timeout=15000)
+        except Exception:
+            try:
+                page.goto(base_url + start_route, wait_until="domcontentloaded", timeout=10000)
+            except Exception as e:
+                print(f"  ⚠️ Could not access {base_url + start_route} to explore links: {e}")
+                browser.close()
+                return [start_route]
+                
+        try:
+            hrefs = page.evaluate("""() => {
+                const links = [];
+                document.querySelectorAll('a').forEach(a => {
+                    const href = a.getAttribute('href');
+                    if (href) links.push(href);
+                });
+                return links;
+            }""")
+        except Exception as e:
+            print(f"  ⚠️ Failed to extract links: {e}")
+            hrefs = []
+            
+        browser.close()
+        
+    start_parsed = urlparse(base_url)
+    
+    for href in hrefs:
+        if len(discovered) >= max_pages:
+            break
+        full_url = urljoin(base_url + start_route, href)
+        parsed = urlparse(full_url)
+        
+        if parsed.netloc == start_parsed.netloc:
+            path = parsed.path
+            if not path:
+                path = "/"
+            if parsed.query:
+                path += "?" + parsed.query
+                
+            if any(path.startswith(proto) for proto in ["mailto:", "tel:", "javascript:"]):
+                continue
+            if any(path.lower().endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".gif", ".zip", ".pdf", ".gz"]):
+                continue
+                
+            discovered.add(path)
+            
+    discovered_list = sorted(list(discovered))
+    print(f"  ✓ Discovered {len(discovered_list)} same-origin link(s) on landing page.")
+    return discovered_list
+
 def scan_nextjs(cwd):
     """
     Scans a Next.js directory tree (App Router & Pages Router) and yields routes.
@@ -313,8 +378,7 @@ def cmd_shot(args):
             print(f"  ✓ Auto-scanned and discovered Next.js pages from local workspace.")
             routes = local_routes
         else:
-            print(f"📡 Mode: Single Page Instant Capture")
-            routes = [route]
+            routes = explore_online_routes(base_url, route)
         
     print(f"📸 Target Base URL: {base_url}")
     print(f"📂 Output Directory: {out_dir}")
