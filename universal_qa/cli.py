@@ -302,8 +302,19 @@ def cmd_shot(args):
         print(f"📡 Mode: Crawl Sitemap XML: {sitemap_url}")
         routes = fetch_sitemap_routes(sitemap_url, base_url)
     else:
-        print(f"📡 Mode: Single Page Instant Capture")
-        routes = [route]
+        # Try to auto-scan local project routes if running inside a web app workspace
+        cwd = os.getcwd()
+        local_routes = []
+        if os.path.exists(os.path.join(cwd, "next.config.js")) or os.path.exists(os.path.join(cwd, "next.config.ts")):
+            local_routes = scan_nextjs(cwd)
+            
+        if local_routes:
+            print(f"🔍 Mode: Local Source Code Auto-Scanner")
+            print(f"  ✓ Auto-scanned and discovered Next.js pages from local workspace.")
+            routes = local_routes
+        else:
+            print(f"📡 Mode: Single Page Instant Capture")
+            routes = [route]
         
     print(f"📸 Target Base URL: {base_url}")
     print(f"📂 Output Directory: {out_dir}")
